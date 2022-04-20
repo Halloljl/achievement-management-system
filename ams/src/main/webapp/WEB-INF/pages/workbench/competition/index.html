@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <base th:href="${#request.getContextPath()}+'/'">
+    <meta charset="UTF-8">
+
+    <link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet" />
+    <link href="jquery/bootstrap-datetimepicker-master/css/bootstrap-datetimepicker.min.css" type="text/css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="jquery/bs_pagination-master/css/jquery.bs_pagination.min.css">
+
+    <script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script type="text/javascript" src="jquery/bs_typeahead/bootstrap3-typeahead.min.js"></script>
+    <script type="text/javascript" src="jquery/bs_pagination-master/js/jquery.bs_pagination.min.js"></script>
+    <script type="text/javascript" src="jquery/bs_pagination-master/localization/en.js"></script>
+
+    <script type="text/javascript">
+
+
+        $(function () {
+            /**
+             * 给创建创新创业计划的按钮添加事件
+             */
+            $("#createCompetitionBtn").click(function () {
+
+                $("#createCompetitionForm").get(0).reset();	//重置表单
+
+                //弹出创建创新创业计划的模态窗口
+                $("#createCompetitionModal").modal("show");
+            });
+
+
+            $("#create-CompetitionOwnerId").blur(function () {
+
+                var competitionOwnerId = $("#create-CompetitionOwnerId").val();
+                $.ajax({
+                    url:'workbench/competition/retStuName.do',
+                    data:{
+                        id:competitionOwnerId,
+                    },
+                    type:'post',
+                    dataType: 'json',
+                    success:function (data) {
+                        if(data.code == "200"){
+                            $("#create-CompetitionOwnerName").val(data.retData);
+                        }
+                    }
+                });
+            });
+            /**
+             * 搜索显示下拉框 typeahead插件,自动是键弹起搜索源中数据
+             */
+            /*$("#create-instructor").typeahead({
+                source: function (jquery, process) {
+                    $.ajax({
+                        url: 'workbench/competition/queryteaNameByName.do',
+                        //查所有用户，无参数  /  条件查询时参数jquery是容器中已经获取的值
+                        data:{
+                            teaName:jquery
+                        },
+                        type: 'post',
+                        dataType: 'json',
+                        success: function (data) {
+                            //process 自动 将json 解析为 函数需要的形式  自动赋值给 函数
+                            process(data);
+                        }
+                    });
+                }
+            });*/
+
+
+            /**
+             * 给保存按钮添加单击事件
+             */
+            $("#saveCreateCompetitionBtn").click(function () {
+
+                //收集createCompetitionForm表单参数
+                var ownerId = $("#create-CompetitionOwnerId").val();
+                var ownerName = $("#create-CompetitionOwnerName").val();
+                var competitionName = $("#create-CompetitionName").val();
+                var projectName = $("#create-ProjectName").val();
+                var awardTime = $("#create-AwardTime").val();
+                var ranking = $("#create-ranking").val();
+                var awardCategory = $("#create-AwardCategory").val();
+                var awardLevel = $("#create-AwardLevel").val();
+
+
+                //表单验证
+                if (ownerId == ""){
+                    alert("学号不能为空");
+                    return;
+                }
+                if (ownerName == ""){
+                    alert("姓名不能为空");
+                    return;
+                }
+                if (competitionName == ""){
+                    alert("竞赛名称不能为空");
+                    return;
+                }
+                if (projectName == ""){
+                    alert("项目名称不能为空");
+                    return;
+                }
+
+                //正则-验证学号为10位数字
+                var regExp = /^\d{10}$/;
+                if (!regExp.test(ownerId)){
+                    alert("学号格式不合法");
+                    return;
+                }
+
+                //添加省级及以上竞赛 的 发送请求
+                $.ajax({
+                    url:'workbench/competition/createCompetition.do',
+                    data:{
+                        stuId:ownerId,    //学号
+                        competitionName:competitionName,        //项目名称
+                        projectName:projectName,    //竞赛名称
+                        awardTime:awardTime,   //获奖时间
+                        awardLevel:awardLevel,    //获奖等级
+                        ranking:ranking,    //等级
+                        awardCategory:awardCategory,   //获奖类别
+                        awardLevel:awardLevel
+                    },
+                    type:'post',
+                    dataType:'json',
+                    success:function (data) {
+                        if (data.code == "200"){
+                            //保存成功，
+                            $("#createCompetitionModal").modal("hide");
+                            queryCompetitionByConditionForPage(1,$("#page").bs_pagination('getOption','rowsPerPage'));
+                        }else {
+                            alert(data.message);
+                            //失败回显信息，模态窗口不关闭,下面的代码可以不写
+                            $("#createCompetitionModal").modal("show");
+                        }
+                    }
+                });
+            });
+
+
+
+
+            $(".mydate").datetimepicker({
+                language:'zh-CN', //语言
+                format:'yyyy-mm',//日期的格式
+                minView:'year', //可以选择的最小视图
+                initialDate:new Date(),//初始化显示的日期
+                autoclose:true,//设置选择完日期或者时间之后，日否自动关闭日历
+                todayBtn:true,//设置是否显示“今天”按钮，默认false
+                clearBtn:true// 表示设置是否显示“清空”按钮，默认是false
+
+            });
+
+            //分页 的 发送请求,主页加载完成显示第一页及数据总记录条数
+            //查询时，不做去空格，参数验证等，因为对系统只读，无写数据
+
+            queryCompetitionByConditionForPage(1,10);
+
+
+            //给条件查询的查询 按钮 添加单击事件
+            //分页 的 发送请求,主页加载完成显示第一页及数据总记录条数
+            //type="submit" 是同步请求，返回的数据会覆盖整个页面，异步请求要改为button，绑定ajax 点击事件
+            $("#queryCompetitionBtn").click(function () {
+                queryCompetitionByConditionForPage(1,$("#page").bs_pagination('getOption','rowsPerPage'));
+            });
+
+            /**
+             * 给全选按钮添加单击事件,给checkbox绑定全选
+             */
+            $("#checkAll").click(function () {
+                //全选 this表示当前正在发生的对象的dom
+                $("#tBody input[type='checkbox']").prop("checked",this.checked);
+            });
+
+            $("#tBody").on("click","input[type='checkbox']",function () {
+                $("#checkAll").prop("checked",
+                    $("#tBody input[type='checkbox']").size() ==
+                    $("#tBody input[type='checkbox']:checked").size());
+            });
+
+            /**
+             * 给删除按钮添加单击事件
+             */
+            $("#deleteCompetitionBtn").click(function () {
+                //收集参数 选中的市场活动的id
+                var $checkedIds = $("#tBody input[type='checkbox']:checked");
+                if ($checkedIds.size()==0){
+                    alert("请选择要删除的省级竞赛");
+                    return;
+                }
+                if (window.confirm("确定要删除？")){
+                    var ids="";
+                    $.each($checkedIds,function (index, obj) {
+                        ids += "id="+this.value+"&";
+                    });
+                    ids = ids.substr(0,ids.length-1);
+                    //向后台发请求
+                    $.ajax({
+                        url:'workbench/competition/deleteCompetitionIds.do',
+                        //这里的ids变量是字符串，传到后端，后端controller接受的是字符串中处理好的键值 id ，
+                        // id = [],可以在浏览器查看发送的请求体的名称是 id ，所以后端要用id来接受，而不能使用ids
+                        data:ids,
+                        type:'post',
+                        dataType:'json',
+                        success:function (data) {
+                            if (data.code == "200"){
+                                queryCompetitionByConditionForPage(1,$("#page").bs_pagination('getOption','rowsPerPage'));
+                            }else {
+                                alert(data.message);
+                            }
+                        }
+                    });
+                }
+            });
+
+            /**
+             * 给修改添加单击事件
+             */
+            $("#editCompetitionBtn").click(function () {
+                //收集参数 选中的市场活动的id
+                var $checkedIds = $("#tBody input[type='checkbox']:checked");
+                if ($checkedIds.size()==0){
+                    alert("请选择要修改的省级及以上竞赛");
+                    return;
+                }else if($checkedIds.size() > 1){
+                    alert("请选择单个修改的省级及以上竞赛");
+                    return;
+                }
+                //下面三种都可以获取id值
+                var id = $checkedIds.val();
+                //发送请求,
+                $.ajax({
+                    url:'workbench/competition/queryCompetitionById.do',
+                    data:{id:id},
+                    type:'get',
+                    dataType:'json',
+                    success:function (data) {
+                        //id是隐藏域，在修改时提交，主键
+                        //把市场活动的信息显示在模态窗口中
+                        $("#edit-id").val(data.id);
+                        $("#edit-CompetitionOwnerId").val(data.stuId);
+                        $("#edit-CompetitionOwnerName").val(data.user.name);
+                        $("#edit-CompetitionName").val(data.competitionName);
+                        $("#edit-ProjectName").val(data.projectName);
+                        $("#edit-AwardTime").val(data.awardTime);
+                        $("#edit-ranking").val(data.ranking);
+                        $("#edit-AwardCategory").val(data.awardCategory);
+                        $("#edit-AwardLevel").val(data.awardLevel);
+
+                        //弹出模态窗口
+                        $("#editCompetitionModal").modal("show");
+                    }
+                });
+            });
+
+
+            $("#edit-CompetitionOwnerId").blur(function () {
+
+                var competitionOwnerId = $("#edit-CompetitionOwnerId").val();
+                $.ajax({
+                    url:'workbench/competition/retStuName.do',
+                    data:{
+                        id:competitionOwnerId,
+                    },
+                    type:'post',
+                    dataType: 'json',
+                    success:function (data) {
+                        if(data.code == "200"){
+                            $("#edit-CompetitionOwnerName").val(data.retData);
+                        }
+                    }
+                });
+            });
+            /**
+             * 搜索显示下拉框 typeahead插件,自动是键弹起搜索源中数据
+             */
+            /*$("#edit-instructor").typeahead({
+                source: function (jquery, process) {
+                    $.ajax({
+                        url: 'workbench/competition/queryteaNameByName.do',
+                        //查所有用户，无参数  /  条件查询时参数jquery是容器中已经获取的值
+                        data:{
+                            teaName:jquery
+                        },
+                        type: 'post',
+                        dataType: 'json',
+                        success: function (data) {
+                            //process 自动 将json 解析为 函数需要的形式  自动赋值给 函数
+                            process(data);
+                        }
+                    });
+                }
+            });*/
+
+            /**
+             * 给更新按钮添加单击事件
+             */
+            $("#updateCompetitionBtn").click(function () {
+                //收集此参数
+                var id = $("#edit-id").val();
+                var stuId = $("#edit-CompetitionOwnerId").val();
+                var ownerName = $("#edit-CompetitionOwnerName").val();
+                var competitionName = $("#edit-CompetitionName").val();
+                var projectName = $("#edit-ProjectName").val();
+                var awardTime = $("#edit-AwardTime").val();
+                var ranking = $("#edit-ranking").val();
+                var awardCategory = $("#edit-AwardCategory").val();
+                var awardLevel = $("#edit-AwardLevel").val();
+
+
+
+                //表单验证
+                if (stuId == ""){
+                    alert("学号不能为空");
+                    return;
+                }
+                if (ownerName == ""){
+                    alert("姓名不能为空");
+                    return;
+                }
+                if (competitionName == ""){
+                    alert("竞赛名称不能为空");
+                    return;
+                }
+                if (projectName == ""){
+                    alert("项目名称不能为空");
+                    return;
+                }
+
+                //正则-验证学号为10位数字
+                var regExp = /^\d{10}$/;
+                if (!regExp.test(stuId)){
+                    alert("学号格式不合法");
+                    return;
+                }
+
+
+                //更新省级及以上竞赛 的 发送请求
+                $.ajax({
+                    url:'workbench/competition/updateEditCompetition.do',
+                    data:{
+                        id:id,
+                        stuId:stuId,
+                        //ownerName:ownerName,
+                        competitionName:competitionName,
+                        projectName:projectName,
+                        awardTime:awardTime,
+                        ranking:ranking,
+                        awardCategory:awardCategory,
+                        awardLevel:awardLevel
+                    },
+                    type:'post',
+                    dataType:'json',
+                    success:function (data) {
+                        if (data.code == "200"){
+                            //修改成功，关闭模态窗口,页数和页大小不变
+                            $("#editCompetitionModal").modal("hide");
+                            queryCompetitionByConditionForPage($("#page").bs_pagination('getOption','currentPage'),$("#page").bs_pagination('getOption','rowsPerPage'));
+                        }else {
+                            alert(data.message);
+                            //失败回显信息，模态窗口不关闭,下面的代码可以不写
+                            $("#editCompetitionModal").modal("show");
+                        }
+                    }
+                });
+            });
+
+
+
+            //下载文件只能使用同步下载，  controller回传时用response的字节流回传
+            /**
+             * 给批量导出添加单击事件
+             */
+            $("#exportCompetitionAllBtn").click(function () {
+                window.location.href="workbench/competition/exportAllCompetitions.do";
+            });
+
+
+            $("#exportCompetitionXzBtn").on('click',function () {
+                //收集参数 选中的创新创业计划的id
+                var $checkedIds = $("#tBody input[type='checkbox']:checked");
+                if ($checkedIds.size()==0){
+                    alert("请选择要导出的竞赛");
+                    return;
+                }
+
+                var ids="";
+                $.each($checkedIds,function (index, obj) {
+                    ids += "id="+this.value+"&";
+                });
+                ids = ids.substr(0,ids.length-1);
+                window.location.href = "workbench/competition/exportCompetitionsByIds.do?"+ids;
+            });
+
+
+            //给"导入"按钮添加单击事件
+            $("#importCompetitionBtn").click(function () {
+                //收集参数
+                var competitionFileName=$("#competitionFile").val();
+                var suffix=competitionFileName.substr(competitionFileName.lastIndexOf(".")+1).toLocaleLowerCase();//xls,XLS,Xls,xLs,....
+                if(suffix!="xls"){
+                    alert("只支持xls文件");
+                    return;
+                }
+                var competitionFile=$("#competitionFile")[0].files[0];
+                if(competitionFile.size>5*1024*1024){
+                    alert("文件大小不超过5MB");
+                    return;
+                }
+
+                //FormData是ajax提供的接口,可以模拟键值对向后台提交参数;
+                //FormData最大的优势是不但能提交文本数据，还能提交二进制数据
+                var formData=new FormData();
+                formData.append("competitionFile",competitionFile);
+
+
+                //发送请求
+                $.ajax({
+
+                    url:'workbench/competition/importCompetitionByList.do',
+                    data:formData,
+                    processData:false,//设置ajax向后台提交参数之前，是否把参数统一转换成字符串：true--是,false--不是,默认是true
+                    contentType:false,//设置ajax向后台提交参数之前，是否把所有的参数统一按urlencoded编码：true--是,false--不是，默认是true
+                    type:'post',
+                    dataType:'json',
+                    success:function (data) {
+                        if(data.code=="200"){
+                            //提示成功导入记录条数
+
+                            alert("成功导入"+data.retData+"条记录");
+                            //关闭模态窗口
+                            $("#importCompetitionModal").modal("hide");
+                            //刷新市场活动列表,显示第一页数据,保持每页显示条数不变
+                            queryCompetitionByConditionForPage(1,$("#page").bs_pagination('getOption', 'rowsPerPage'));
+                        }else{
+                            //提示信息
+                            alert(data.message);
+                            //模态窗口不关闭
+                            $("#importCompetitionModal").modal("show");
+                        }
+                    }
+                });
+            });
+
+
+        });
+
+
+        /**
+         * 分页回调函数
+         * @param pageNo 页号
+         * @param pageSize 每页大小
+         */
+        function queryCompetitionByConditionForPage(pageNo,pageSize) {
+
+            //收集参数
+            var projectName = $("#query-projectName").val();
+            var ownerId = $("#query-ownerId").val();
+            var ownerName = $("#query-ownerName").val();
+
+
+            //var pageNo=1;
+            //var pageSize=10;
+            //发送请求
+            $.ajax({
+                url: 'workbench/competition/queryCompetitionByConditionForPage.do',
+                data: {
+                    projectName: projectName,
+                    ownerId: ownerId,
+                    ownerName: ownerName,
+                    pageNo: pageNo,
+                    pageSize: pageSize
+                },
+                type: 'post',
+                dataType: 'json',
+                success: function (data) {
+                    var htmlStr = "";
+                    $.each(data.competitionList, function (index, obj) {
+
+                        htmlStr += "<tr class=\"active\">";
+                        htmlStr += "<td><input type=\"checkbox\" name='id' value=\"" + obj.id + "\"/></td>";
+                        htmlStr += "<td><a style=\"text-decoration: none; cursor: pointer;\" onclick=\"window.location.href='workbench/competition/detailCompetition.do?id="+obj.id+"'\">" + obj.projectName + "</a></td>";
+                        htmlStr += "<td>" + obj.competitionName + "</td>";
+                        htmlStr += "<td>" + obj.stuId + "</td>";
+                        htmlStr += "<td>" + obj.user.name + "</td>";
+                        htmlStr += "<td>" + obj.awardCategory + "</td>";
+                        htmlStr += "<td>" + obj.awardLevel + "</td>";
+                        htmlStr += "</tr>";
+                    });
+                    $("#tBody").html(htmlStr);
+                    //当翻页的时候，对全选框清空
+                    $("#checkAll").prop("checked",false);
+
+                    //计算总页数
+                    var totalPages = 1;
+                    // if (data.totalRows % pageSize == 0) {
+                    // 	totalPages = data.totalRows / pageSize;
+                    // } else {
+                    // 	totalPages = parseInt(data.totalRows / pageSize) + 1;
+                    // }
+                    totalPages = Math.ceil(data.totalRows/pageSize);
+                    //对容器调用bs_pagination工具函数，显示翻页信息
+                    $("#page").bs_pagination({
+                        currentPage: pageNo,//当前页号,相当于pageNo
+
+                        rowsPerPage: pageSize,//每页显示条数,相当于pageSize
+                        totalRows: data.totalRows,//总条数
+                        totalPages: totalPages,  //总页数,必填参数.
+
+                        visiblePageLinks: 5,//最多可以显示的卡片数
+
+                        showGoToPage: true,//是否显示"跳转到"部分,默认true--显示
+                        showRowsPerPage: true,//是否显示"每页显示条数"部分。默认true--显示
+                        showRowsInfo: true,//是否显示记录的信息，默认true--显示
+
+                        //用户每次切换页号，都自动触发本函数;
+                        //每次返回切换页号之后的pageNo和pageSize
+                        onChangePage: function (event, pageObj) { // returns page_num and rows_per_page after a link has clicked
+                            queryCompetitionByConditionForPage(pageObj.currentPage, pageObj.rowsPerPage);
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+
+
+</head>
+<body>
+
+<!-- 创建省级及以上竞赛的模态窗口 -->
+<div class="modal fade" id="createCompetitionModal" role="dialog">
+    <div class="modal-dialog" role="document" style="width: 85%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">×</span>
+                </button>
+                <h4 class="modal-title" id="myModalLabel1">创建省级及以上竞赛</h4>
+            </div>
+            <div class="modal-body">
+
+                <form class="form-horizontal" id="createCompetitionForm" role="form">
+
+                    <div class="form-group">
+                        <label for="create-CompetitionOwnerId" class="col-sm-2 control-label">学号<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-CompetitionOwnerId">
+                        </div>
+                        <label for="create-CompetitionOwnerName" class="col-sm-2 control-label">姓名<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-CompetitionOwnerName" readonly>
+                        </div>
+
+                    </div>
+
+                    <div class="form-group">
+                        <label for="create-CompetitionName" class="col-sm-2 control-label">竞赛名称<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-CompetitionName">
+                        </div>
+                        <label for="create-ProjectName" class="col-sm-2 control-label">项目名称<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-ProjectName">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-AwardTime" class="col-sm-2 control-label">获奖时间</label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input class="form-control mydate" name="mydate" type="text" id="create-AwardTime" readonly/>
+                        </div>
+                        <label for="create-ranking" class="col-sm-2 control-label">排名</label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-ranking">
+                        </div>
+                        </div>
+                    <div class="form-group">
+                        <label for="create-AwardCategory" class="col-sm-2 control-label">获奖类别<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-AwardCategory">
+                        </div>
+                        <label for="create-AwardLevel" class="col-sm-2 control-label">获奖等级<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="create-AwardLevel">
+                        </div>
+                    </div>
+
+                </form>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="saveCreateCompetitionBtn" data-dismiss="modal">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改省级及以上竞赛的模态窗口 -->
+<div class="modal fade" id="editCompetitionModal" role="dialog">
+    <div class="modal-dialog" role="document" style="width: 85%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">×</span>
+                </button>
+                <h4 class="modal-title" id="myModalLabel2">修改省级及以上竞赛</h4>
+            </div>
+            <div class="modal-body">
+
+                <form class="form-horizontal" role="form">
+                    <input type="hidden" id="edit-id" readonly>
+                    <div class="form-group">
+                        <label for="edit-CompetitionOwnerId" class="col-sm-2 control-label">学号<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="edit-CompetitionOwnerId">
+                        </div>
+                        <label for="edit-CompetitionOwnerName" class="col-sm-2 control-label">姓名<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="edit-CompetitionOwnerName">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-CompetitionName" class="col-sm-2 control-label">竞赛名称<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="edit-CompetitionName">
+                        </div>
+                        <label for="edit-ProjectName" class="col-sm-2 control-label">项目名称<span style="font-size: 15px; color: red;">*</span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="edit-ProjectName">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-AwardTime" class="col-sm-2 control-label">获奖时间</label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <div class="col-sm-10" style="width: 300px;">
+                                <input type="text" class="form-control mydate" name="mydate" id="edit-AwardTime" readonly>
+                            </div>
+                        </div>
+                        <label for="edit-ranking" class="col-sm-2 control-label">排名</label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <div class="col-sm-10" style="width: 300px;">
+                                <input type="text" class="form-control" id="edit-ranking">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-AwardCategory" class="col-sm-2 control-label">获奖类别<span style="font-size: 15px; color: red;"></span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="edit-AwardCategory">
+                        </div>
+                        <label for="edit-AwardLevel" class="col-sm-2 control-label">获奖等级<span style="font-size: 15px; color: red;"></span></label>
+                        <div class="col-sm-10" style="width: 300px;">
+                            <input type="text" class="form-control" id="edit-AwardLevel">
+                        </div>
+                    </div>
+                </form>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="updateCompetitionBtn">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 导入创新创业计划的模态窗口 -->
+<div class="modal fade" id="importCompetitionModal" role="dialog">
+    <div class="modal-dialog" role="document" style="width: 85%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">×</span>
+                </button>
+                <h4 class="modal-title" id="myModalLabel">导入省级竞赛</h4>
+            </div>
+            <div class="modal-body" style="height: 350px;">
+                <div style="position: relative;top: 20px; left: 50px;">
+                    请选择要上传的文件：<small style="color: gray;">[仅支持.xls]</small>
+                </div>
+                <div style="position: relative;top: 40px; left: 50px;">
+                    <input type="file" id="competitionFile">
+                </div>
+                <div style="position: relative; width: 400px; height: 320px; left: 45% ; top: -40px;" >
+                    <h3>重要提示</h3>
+                    <ul>
+                        <li>操作仅针对Excel，仅支持后缀名为XLS的文件。</li>
+                        <li>给定文件的第一行将视为字段名。</li>
+                        <li>请确认您的文件大小不超过5MB。</li>
+                        <li>请确认您的文件中没有重复的数据。</li>
+                        <li>日期值以文本形式保存，必须符合yyyy-MM-dd格式。</li>
+                        <li>默认情况下，字符编码是UTF-8 (统一码)，请确保您导入的文件使用的是正确的字符编码方式。</li>
+                        <li>建议您在导入真实数据之前用测试文件测试文件导入功能。</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button id="importCompetitionBtn" type="button" class="btn btn-primary">导入</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div>
+    <div style="position: relative; left: 10px; top: -10px;">
+        <div class="page-header">
+            <h3>省级及以上竞赛列表</h3>
+        </div>
+    </div>
+</div>
+<div style="position: relative; top: -20px; left: 0px; width: 100%; height: 100%;">
+    <div style="width: 100%; position: absolute;top: 5px; left: 10px;">
+
+        <div class="btn-toolbar" role="toolbar" style="height: 80px;">
+            <form class="form-inline" role="form" style="position: relative;top: 8%; left: 5px;">
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">学号</div>
+                        <input class="form-control" type="text" id="query-ownerId">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">姓名</div>
+                        <input class="form-control" type="text" id="query-ownerName">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">项目名称</div>
+                        <input class="form-control" type="text" id="query-projectName">
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-default" id="queryCompetitionBtn">查询</button>
+
+            </form>
+        </div>
+        <div class="btn-toolbar" role="toolbar" style="background-color: #F7F7F7; height: 50px; position: relative;top: 5px;">
+            <div class="btn-group" style="position: relative; top: 18%;">
+                <button type="button" class="btn btn-primary" id="createCompetitionBtn"><span class="glyphicon glyphicon-plus"></span> 创建</button>
+                <button type="button" class="btn btn-default"id="editCompetitionBtn"><span class="glyphicon glyphicon-pencil"></span> 修改</button>
+                <button type="button" class="btn btn-danger" id="deleteCompetitionBtn"><span class="glyphicon glyphicon-minus"></span> 删除</button>
+            </div>
+            <div class="btn-group" style="position: relative; top: 18%;">
+                <button type="button" class="btn btn-default" data-toggle="modal" data-target="#importCompetitionModal" ><span class="glyphicon glyphicon-import"></span> 上传列表数据（导入）</button>
+                <button id="exportCompetitionAllBtn" type="button" class="btn btn-default"><span class="glyphicon glyphicon-export"></span> 下载列表数据（批量导出）</button>
+                <button id="exportCompetitionXzBtn" type="button" class="btn btn-default"><span class="glyphicon glyphicon-export"></span> 下载列表数据（选择导出）</button>
+            </div>
+        </div>
+        <div style="position: relative;top: 10px;">
+            <table class="table table-hover">
+                <thead>
+                <tr style="color: #B3B3B3;">
+                    <td><input type="checkbox" id="checkAll"/></td>
+                    <td>项目名称</td>
+                    <td>竞赛名称</td>
+                    <td>学号</td>
+                    <td>姓名</td>
+                    <td>获奖类别</td>
+                    <td>获奖等级</td>
+                </tr>
+                </thead>
+                <tbody id="tBody">
+
+
+                </tbody>
+            </table>
+        </div>
+
+        <!-- page -->
+        <div id="page"></div>
+
+    </div>
+
+</div>
+</body>
+</html>

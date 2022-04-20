@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/context
+http://www.springframework.org/schema/context/spring-context.xsd
+http://www.springframework.org/schema/mvc
+http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+    <!-- dispatcherServlet截获所有URL请求 -->
+    <mvc:default-servlet-handler/>
+
+    <!-- 配置视图解析器 -->
+    <!--    <bean id="viewResolver"-->
+    <!--          class="org.springframework.web.servlet.view.InternalResourceViewResolver">-->
+    <!--        <property name="prefix" value="/WEB-INF/pages/"/>-->
+    <!--        <property name="suffix" value=".jsp"/>-->
+    <!--    </bean>-->
+
+
+    <!--thymeleaf视图解析器-->
+    <bean id="viewResolver" class="org.thymeleaf.spring5.view.ThymeleafViewResolver">
+        <property name="order" value="1"/>
+        <property name="characterEncoding" value="UTF-8"/>
+        <property name="templateEngine">
+            <bean class="org.thymeleaf.spring5.SpringTemplateEngine">
+                <property name="templateResolver">
+                    <bean class="org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver">
+                        <property name="prefix" value="/WEB-INF/pages/"/>
+                        <property name="suffix" value=".html"/>
+                        <property name="templateMode" value="HTML5"/>
+                        <property name="characterEncoding" value="UTF-8"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+    </bean>
+
+
+
+    <!-- spring mvc 扫描包下的controller -->
+    <context:component-scan base-package="org.hallo.ams.web.controller"/>
+    <context:component-scan base-package="org.hallo.ams.settings.web.controller"/>
+    <context:component-scan base-package="org.hallo.ams.workbench.web.controller"/>
+
+    <!-- 配置注解驱动 -->
+    <mvc:annotation-driven/>
+
+    <!--配置拦截器-->
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/settings/**"/>
+            <mvc:mapping path="/workbench/**"/>
+            <!--登录页面和登录跳转验证要排除(排除拦截的优先级高于拦截)-->
+            <mvc:exclude-mapping path="/settings/qx/user/toLogin.do"/>
+            <mvc:exclude-mapping path="/settings/qx/user/login.do"/>
+            <!--拦截器类-->
+            <bean class="org.hallo.ams.settings.web.interceptor.LoginInterceptor" />
+        </mvc:interceptor>
+
+<!--        <mvc:interceptor>
+            <mvc:mapping path="/settings/**"/>
+            <mvc:mapping path="/workbench/**"/>
+            <mvc:exclude-mapping path="/settings/qx/user/toLogin.do"/>
+            <mvc:exclude-mapping path="/settings/qx/user/login.do"/>
+            <mvc:exclude-mapping path="/workbench/studentIndex.do"/>
+            &lt;!&ndash;拦截器类&ndash;&gt;
+            <bean class="org.hallo.ams.settings.web.interceptor.JurisdictionInterceptor" />
+        </mvc:interceptor>-->
+    </mvc:interceptors>
+
+
+
+    <!--
+path：设置处理的请求地址
+view-name：设置请求地址所对应的视图名称
+-->
+<!--    <mvc:view-controller path="/" view-name="index"></mvc:view-controller>-->
+
+<!--    虽然爆红，但是可以正常使用-->
+<!--    <mvc:view-controller path="/" view-name="index"/>-->
+
+
+    <!-- 配置文件上传解析器 id:必须是multipartResolver-->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="#{1024*1024*80}"/>
+        <property name="defaultEncoding" value="utf-8"/>
+    </bean>
+</beans>

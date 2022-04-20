@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<base th:href="${#request.getContextPath()}+'/'">
+<meta charset="UTF-8">
+<link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet" />
+<script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
+<script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
+<!--echarts-->
+<script type="text/javascript" src="jquery/echarts/echarts.min(1).js"></script>
+</head>
+<body style="height: 100%; margin: 0">
+<div id="container" style="width: 1200px;height:800px; margin-left:200px"></div>
+
+
+<!--<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5.3.2/dist/echarts.min.js"></script>-->
+<!-- Uncomment this line if you want to dataTool extension
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5.3.2/dist/extension/dataTool.min.js"></script>
+-->
+<!-- Uncomment this line if you want to use gl extension
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
+-->
+<!-- Uncomment this line if you want to echarts-stat extension
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts-stat@latest/dist/ecStat.min.js"></script>
+-->
+<!-- Uncomment this line if you want to use map
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5.3.2/map/js/china.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5.3.2/map/js/world.js"></script>
+-->
+<!-- Uncomment these two lines if you want to use bmap extension
+<script type="text/javascript" src="https://api.map.baidu.com/api?v=2.0&ak=<Your Key Here>"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@{{version}}/dist/extension/bmap.min.js"></script>
+-->
+
+<script type="text/javascript">
+	var dom = document.getElementById("container");
+	var myChart = echarts.init(dom);
+	var app = {};
+
+	var option;
+
+
+
+	setTimeout(function () {
+		option = {
+			legend: {},
+			tooltip: {
+				trigger: 'axis',
+				showContent: false
+			},
+			dataset: {
+				source: [
+					['product', '2019', '2020', '2021', '2022', '2023', '2024'],
+					['创新创业计划', 56, 82, 88, 70, 53, 85],
+					['科研项目', 51, 51, 55, 53, 73, 68],
+					['学术论文', 40, 62, 69, 36, 45, 32],
+					['专利', 25, 37, 41, 18, 33.9, 49]
+				]
+			},
+			xAxis: { type: 'category' },
+			yAxis: { gridIndex: 0 },
+			grid: { top: '55%' },
+			series: [
+				{
+					type: 'line',
+					smooth: true,
+					seriesLayoutBy: 'row',
+					emphasis: { focus: 'series' }
+				},
+				{
+					type: 'line',
+					smooth: true,
+					seriesLayoutBy: 'row',
+					emphasis: { focus: 'series' }
+				},
+				{
+					type: 'line',
+					smooth: true,
+					seriesLayoutBy: 'row',
+					emphasis: { focus: 'series' }
+				},
+				{
+					type: 'line',
+					smooth: true,
+					seriesLayoutBy: 'row',
+					emphasis: { focus: 'series' }
+				},
+				{
+					type: 'pie',
+					id: 'pie',
+					radius: '30%',
+					center: ['50%', '25%'],
+					emphasis: {
+						focus: 'self'
+					},
+					label: {
+						formatter: '{b}: {@2012} ({d}%)'
+					},
+					encode: {
+						itemName: 'product',
+						value: '2012',
+						tooltip: '2012'
+					}
+				}
+			]
+		};
+		myChart.on('updateAxisPointer', function (event) {
+			const xAxisInfo = event.axesInfo[0];
+			if (xAxisInfo) {
+				const dimension = xAxisInfo.value + 1;
+				myChart.setOption({
+					series: {
+						id: 'pie',
+						label: {
+							formatter: '{b}: {@[' + dimension + ']} ({d}%)'
+						},
+						encode: {
+							value: dimension,
+							tooltip: dimension
+						}
+					}
+				});
+			}
+		});
+		myChart.setOption(option);
+	});
+
+
+	if (option && typeof option === 'object') {
+		myChart.setOption(option);
+	}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org/">
+<head>
+	<base th:href="${#request.getContextPath()}+'/'">
+	<meta charset="utf-8">
+	<title>登录页面</title>
+	<script src="jquery/jquery-1.11.1-min.js"></script>
+	<style>
+		:root {
+			--round-size:24rem;
+		}
+		body {
+			overflow:hidden;
+			padding:0px;
+			margin:0px;
+		}
+		/*背景 渐变部分*/
+		.login-bg {
+			height:100vh;
+			width:100vw;
+			background:linear-gradient(180deg,#02aab0,#00cdac );
+		}
+		/*白色部分*/
+		.login-bg:before {
+			content:"";
+			position:absolute;
+			right:-25%;
+			top:-15%;
+			height:300%;
+			width:100%;
+			background:#fff;
+			transform:rotate(25deg);
+		}
+		/*圆圈*/
+		.round {
+			position:absolute;
+			top:30%;
+			left:30%;
+			width:var(--round-size);
+			height:var(--round-size);
+			border-radius:50%;
+			background:#00cdac;
+			display:grid;
+			justify-content:center;
+			opacity:0;
+			animation-delay:.5s;
+			animation-duration:.6s;
+			animation-name:zoomIn1;
+			animation-fill-mode:both;
+		}
+		/*		!*小电脑*!
+                .round:before {
+                    content:"";
+                    --r-size:6rem;
+                    width:calc(var(--round-size) - var(--r-size));
+                    height:calc(var(--round-size) - var(--r-size));
+                    !* border-radius:50%;
+                    background:#02aab0;
+                    *!
+                    background-image:url('/image/png/电脑1.png');
+                    background-size:100%;
+                    margin:auto;
+                    opacity:0;
+                    animation-delay:.7s;
+                    animation-duration:.4s;
+                    animation-name:zoomIn2;
+                    animation-fill-mode:both;
+                }*/
+		/*圆圈动画*/
+		@keyframes zoomIn1 {
+			from {
+				opacity:0;
+				transform:scale3d(.3,.3,.3);
+			}
+			70% {
+				transform:scale3d(1.2,1.2,1.2);
+			}
+			100% {
+				transform:scale3d(1,1,1);
+				opacity:1;
+			}
+		}/*小电脑动画*/
+		@keyframes zoomIn2 {
+			from {
+				opacity:0;
+				transform:scale3d(.3,.3,.3);
+			}
+			100% {
+				opacity:.8;
+			}
+		}/*小图标 图层*/
+		.icon-div,.icon-div-copy {
+			position:absolute;
+			top:30%;
+			left:30%;
+			width:var(--round-size);
+			height:var(--round-size);
+		}
+		/*图标*/
+		.icon {
+			background-color:#fff;
+			background-repeat:no-repeat;
+			background-position:center;
+			background-size:80%;
+			width:5rem;
+			height:5rem;
+			position:absolute;
+			animation-duration:.4s;
+			animation-name:fadeInUp;
+			animation-fill-mode:both;
+			border-radius:50%;
+			box-shadow:0 2px 4px rgba(0,0,0,.12),0 0 6px rgba(0,0,0,.04);
+		}
+		/* 图标延迟进入 */
+		.icon1 {
+			/*background-image:url*/
+			top:41%;
+			left:-15%;
+			animation-delay:1.2s;
+		}
+		.icon2 {
+			/*background-image:url('/image/png/2.png');*/
+			top:-3%;
+			left:3%;
+			animation-delay:1.4s;
+		}
+		.icon3 {
+			background-image:url('/image/png/3.png');
+			top:-1%;
+			left:42%;
+			animation-delay:1.5s;
+		}
+		.icon4 {
+			/*background-image:url('/image/png/4.png');*/
+			top:15%;
+			left:84%;
+			animation-delay:1.7s;
+		}
+		/*图标进入*/
+		@keyframes fadeInUp {
+			from {
+				opacity:0;
+				transform:translate3d(0,30%,0);
+			}
+			99% {
+				opacity:1;
+			}
+			/*进入后隐藏 由copy 继续动画*/
+			100% {
+				opacity:0;
+			}
+		}/*copy图层*/
+		.icon-div-copy .icon {
+			opacity:0;
+			animation:updown 1.5s infinite ease-in-out;
+			animation-direction:alternate;
+		}
+		/*延迟进入*/
+		.icon-div-copy .icon1 {
+			animation-delay:1.5s;
+		}
+		.icon-div-copy .icon2 {
+			animation-delay:1.7s;
+		}
+		.icon-div-copy .icon3 {
+			animation-delay:1.8s;
+		}
+		.icon-div-copy .icon4 {
+			animation-delay:2.09s;
+		}
+		/*copy图标来回动*/
+		@keyframes updown {
+			from {
+				opacity:1;
+				transform:translate3d(0,0%,0);
+			}
+			1% {
+				opacity:1;
+				transform:translate3d(0,0%,0);
+			}
+			100% {
+				opacity:1;
+				transform:translate3d(0,-10%,0);
+			}
+		}/*表单*/
+		.form {
+			position:absolute;
+			right:10%;
+			top:28%;
+			animation-duration:.8s;
+			animation-delay:.5s;
+			animation-name:fadeInRight;
+			animation-fill-mode:both;
+			animation-timing-function:ease-in;
+			width:30rem;
+			height:30rem;
+			font-family:'微软雅黑';
+		}
+		.form > * {
+			margin-bottom:3rem;
+		}
+		/*标题*/
+		.form .title {
+			color:#02aab0;
+			font-size:4rem;
+			font-weight:600;
+			letter-spacing:6px;
+			line-height:4rem;
+		}
+		/*输入框*/
+		.form .f-field-body.f-widget-content {
+			background-color:#fff;
+			border-color:#02aab0;
+		}
+		.form input {
+			color:#333 !important;
+			font-size:1.5rem;
+			line-height:3rem;
+			text-indent:6px;
+			width:98%;
+		}
+		/*登录按钮*/
+		.form .btn {
+			width:100%;
+			height:4rem;
+			border:none;
+			background:linear-gradient(90deg,#02aab0,#00cdac );
+			line-height:3rem;
+			font-size:1.5rem;
+			margin:0;
+			text-indent:1rem;
+			letter-spacing:1rem;
+			color:#fff;
+			cursor:pointer;
+		}
+		/*表单进入动画*/
+		@keyframes fadeInRight {
+			from {
+				opacity:0;
+				transform:translate3d(30%,0,0);
+			}
+			to {
+				opacity:1;
+				transform:none;
+			}
+		}</style>
+	<script type="text/javascript">
+		$(function () {
+			//给浏览器添加回车登录，整个dom
+			document.addEventListener("keydown",function(e) {
+				//alert(e.code == "Enter");
+				if (e.code == "Enter"){
+					//模拟触发绑定的事件
+					$("#loginBtn").click();
+				}
+			});
+
+			//登录事件,绑定事件
+			$("#loginBtn").click(function () {
+				//收集参数
+				var loginAct = $.trim($("#loginAct").val());
+				var loginPwd = $.trim($("#loginPwd").val());
+				var isRemPwd = $.trim($("#isRemPwd").prop("checked"));
+				//验证参数
+				if (loginAct==""){
+					alert("用户名不能为空");
+					return;
+				}
+				if (loginPwd==""){
+					alert("密码不能为空");
+					return;
+				}
+
+				//发送请求
+				$.ajax({
+					url:'settings/qx/user/login.do',
+					data:{
+						loginAct:loginAct,
+						loginPwd:loginPwd,
+						isRemPwd:isRemPwd
+					},
+					type:'post',
+					// 返回类型为json
+					dataType:'json',
+					success:function (data) {
+						if (data.code == "200"){
+							//登录成功 -> 跳转到业务页面
+							if (data.retData == "2"){
+								window.location.href="[[${#request.getContextPath()}]]/workbench/index.do";
+							}else{
+								window.location.href="[[${#request.getContextPath()}]]/workbench/studentIndex.do";
+							}
+
+						}else {
+							//登录失败，显示提示信息
+							$("#msg").html("<font color='red'>"+data.message+"</font>");
+						}
+					},
+					//该函数的返回值会影响ajax是否会真的向后台发送请求
+					beforeSend:function () {
+						//可以进行表单验证
+						$("#msg").html("<font color='green'>正在努力验证...<font/>");
+						return true;
+					}
+				});
+			});
+		});
+	</script>
+</head>
+<body>
+<div class="login-bg">
+	<div class="round">
+	</div>
+	<div class="icon-div">
+		<div class="icon icon1"></div>
+		<div class="icon icon2"></div>
+		<div class="icon icon3"></div>
+		<div class="icon icon4"></div>
+	</div>
+	<div class="icon-div-copy">
+		<div class="icon icon1"></div>
+		<div class="icon icon2"></div>
+		<div class="icon icon3"></div>
+		<div class="icon icon4"></div>
+	</div>
+</div>
+<form action="workbench/index.html" class="form">
+	<div class="title">登录系统</div>
+	<div class="username">
+		<input type="text" id="loginAct" placeholder="请输入用户名">
+	</div>
+	<div class="pwd">
+		<input type="password" id="loginPwd" placeholder="请输入密码">
+	</div>
+	<input style="width:20px !important;" id="isRemPwd" type="checkbox"> 十天内免登录&nbsp;&nbsp;&nbsp;&nbsp;
+	<span id="msg"></span>
+	<button id="loginBtn" type="button" class="btn">登录</button>
+	<!--<button class="btn" id="loginBtn">登录</button>-->
+
+</form>
+
+<script>
+
+</script>
+</body>
+</html>
